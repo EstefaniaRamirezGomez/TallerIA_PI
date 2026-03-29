@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container mt-4">
+    <h2>🎬 Movie Recommender</h2>
+    <p class="text-muted">Enter a description or theme and we'll find the most similar movie using AI embeddings.</p>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="prompt" class="form-label">Enter your prompt:</label>
+            <input type="text" class="form-control" id="prompt" name="prompt"
+                   placeholder="e.g. a war movie set in World War II..."
+                   value="{{ prompt }}" />
+        </div>
+        <button type="submit" class="btn btn-primary">Find Movie</button>
+    </form>
+
+    {% if prompt %}
+        <hr class="mt-4">
+        <p>Searching for: <strong>{{ prompt }}</strong></p>
+
+        {% if recommended_movie %}
+        <div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+            <div class="col">
+                <div class="card h-100">
+                    <img src="{{ recommended_movie.image.url }}" class="card-img-top" alt="{{ recommended_movie.title }}">
+                    <div class="card-body">
+                        <h5 class="card-title fw-bold">{{ recommended_movie.title }}</h5>
+                        <p class="card-text">{{ recommended_movie.description }}</p>
+                        <p class="card-text text-muted">{{ recommended_movie.genre }}</p>
+                        <p class="card-text text-muted">{{ recommended_movie.year }}</p>
+                        <p class="card-text">
+                            <small class="text-success fw-bold">Cosine similarity: {{ similarity_score }}</small>
+                        </p>
+                        {% if recommended_movie.url %}
+                            <a href="{{ recommended_movie.url }}" class="btn btn-primary">Movie Link</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning mt-3">
+            No movie found. Make sure movies have embeddings generated in the database.
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+{% endblock content %}

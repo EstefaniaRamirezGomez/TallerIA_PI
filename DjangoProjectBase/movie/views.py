@@ -8,6 +8,17 @@ import matplotlib
 import io
 import urllib, base64
 
+from openai import OpenAI
+import numpy as np
+import os
+from dotenv import load_dotenv
+
+load_dotenv('openAI.env')
+client = OpenAI(api_key=os.environ.get('openai_apikey'))
+
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
 def home(request):
     #return HttpResponse('<h1>Welcome to Home Page</h1>')
     #return render(request, 'home.html')
@@ -105,6 +116,45 @@ def statistics_view(request):
     genre_graphic = generate_bar_chart(movie_counts_by_genre, 'Genre', 'Number of movies')
 
     return render(request, 'statistics.html', {'year_graphic': year_graphic, 'genre_graphic': genre_graphic})
+
+
+def recommend_movie(request):
+    recommended_movie = None
+    similarity_score = None
+    prompt = ""
+
+    if request.method == 'POST':
+        prompt = request.POST.get('prompt', '').strip()
+
+        if prompt:
+            # Generar embedding del prompt
+            response = client.embeddings.create(
+                input=[prompt],
+                model="text-embedding-3-small"
+            )
+            prompt_emb = np.array(response.data[0].embedding, dtype=np.float32)
+
+            # Recorrer la base de datos y comparar
+            best_movie = None
+            max_similarity = -1
+
+            for movie in Movie.objects.all():
+                if movie.emb:
+                    movie_emb = np.frombuffer(movie.emb, dtype=np.float32)
+                    similarity = cosine_similarity(prompt_emb, movie_emb)
+
+                    if similarity > max_similarity:
+                        max_similarity = similarity
+                        best_movie = movie
+
+            recommended_movie = best_movie
+            similarity_score = round(float(max_similarity), 4)
+
+    return render(request, 'recommend.html', {
+        'recommended_movie': recommended_movie,
+        'similarity_score': similarity_score,
+        'prompt': prompt,
+    })
 
 
 def generate_bar_chart(data, xlabel, ylabel):
